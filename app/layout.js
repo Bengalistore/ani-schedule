@@ -25,6 +25,8 @@ export const metadata = {
   },
   description:
     "Track weekly anime episode schedules and upcoming releases with live countdowns and official streaming links.",
+  verification: {
+    google: "<meta name="google-site-verification" content="txippdlpp4CGrd31GNP0olRK9xTfB-9fZdUCah8XTX4" />"
   openGraph: {
     type: "website",
     siteName: "AnimeAiring"
