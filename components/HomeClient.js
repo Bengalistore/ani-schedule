@@ -2,14 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Tabs from "./Tabs";
+import WeekdayTabs from "./WeekdayTabs";
 import SearchBar from "./SearchBar";
 import AnimeCard from "./AnimeCard";
+import { getAirWeekday } from "@/lib/episode";
 
 export default function HomeClient() {
   const [tab, setTab] = useState("schedule");
   const [query, setQuery] = useState("");
   const [anime, setAnime] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Defaults to today's weekday so the Schedule tab opens on "what's airing today".
+  const [weekday, setWeekday] = useState(() => new Date().getDay());
 
   useEffect(() => {
     const controller = new AbortController();
@@ -27,7 +31,13 @@ export default function HomeClient() {
     return () => controller.abort();
   }, [tab, query]);
 
-  const empty = !loading && anime.length === 0;
+  const visibleAnime = useMemo(() => {
+    if (tab !== "schedule" || weekday === "all") return anime;
+    return anime.filter((item) => getAirWeekday(item) === weekday);
+  }, [anime, tab, weekday]);
+
+  const empty = !loading && visibleAnime.length === 0;
+  const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
@@ -43,10 +53,16 @@ export default function HomeClient() {
         </p>
       </header>
 
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Tabs active={tab} onChange={setTab} />
         <SearchBar value={query} onChange={setQuery} />
       </div>
+
+      {tab === "schedule" && (
+        <div className="mb-6">
+          <WeekdayTabs active={weekday} onChange={setWeekday} />
+        </div>
+      )}
 
       {loading && (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -64,14 +80,16 @@ export default function HomeClient() {
           {query
             ? `No anime match "${query}".`
             : tab === "schedule"
-            ? "No airing anime yet. Check back soon."
+            ? weekday === "all"
+              ? "No airing anime yet. Check back soon."
+              : `Nothing airs on ${DAY_NAMES[weekday]}.`
             : "No upcoming anime announced yet."}
         </div>
       )}
 
       {!loading && !empty && (
         <div className="grid gap-4 sm:grid-cols-2">
-          {anime.map((item) => (
+          {visibleAnime.map((item) => (
             <AnimeCard key={item._id} anime={item} />
           ))}
         </div>
