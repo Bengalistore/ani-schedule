@@ -40,6 +40,12 @@ const AnimeSchema = new mongoose.Schema(
     intervalDays: { type: Number, default: 7 },
     totalEpisodes: { type: Number, default: null },
 
+    // Manual correction point: if an episode gets delayed/skipped, an
+    // admin can set these once. Everything after this point is still
+    // computed automatically from here using intervalDays.
+    nextEpisodeNumber: { type: Number, default: null },
+    nextEpisodeAt: { type: Date, default: null },
+
     seoTitle: { type: String, default: "" },
     seoDescription: { type: String, default: "" }
   },
