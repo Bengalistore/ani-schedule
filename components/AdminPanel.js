@@ -18,6 +18,8 @@ const EMPTY_FORM = {
   releaseMonth: "",
   intervalDays: 7,
   totalEpisodes: "",
+  nextEpisodeNumber: "",
+  nextEpisodeAt: "",
   seoTitle: "",
   seoDescription: ""
 };
@@ -62,6 +64,8 @@ export default function AdminPanel() {
       releaseMonth: anime.releaseMonth || "",
       intervalDays: anime.intervalDays || 7,
       totalEpisodes: anime.totalEpisodes || "",
+      nextEpisodeNumber: anime.nextEpisodeNumber || "",
+      nextEpisodeAt: anime.nextEpisodeAt ? toLocalInputValue(anime.nextEpisodeAt) : "",
       seoTitle: anime.seoTitle || "",
       seoDescription: anime.seoDescription || ""
     });
@@ -91,7 +95,11 @@ export default function AdminPanel() {
       releaseYear: form.releaseYear ? Number(form.releaseYear) : null,
       releaseMonth: form.releaseMonth ? Number(form.releaseMonth) : null,
       intervalDays: Number(form.intervalDays) || 7,
-      totalEpisodes: form.totalEpisodes ? Number(form.totalEpisodes) : null
+      totalEpisodes: form.totalEpisodes ? Number(form.totalEpisodes) : null,
+      nextEpisodeNumber: form.nextEpisodeNumber ? Number(form.nextEpisodeNumber) : null,
+      nextEpisodeAt: form.nextEpisodeAt
+        ? new Date(form.nextEpisodeAt).toISOString()
+        : null
     };
 
     const url = editingId ? `/api/anime/${editingId}` : "/api/anime";
@@ -270,6 +278,30 @@ export default function AdminPanel() {
             type="number"
             value={form.totalEpisodes}
             onChange={(v) => setForm({ ...form, totalEpisodes: v })}
+          />
+        </Field>
+
+        <p className="col-span-full -mb-2 text-xs text-muted">
+          Episode delayed or didn&apos;t air on time? Set these two fields to
+          correct it — everything after that will keep auto-continuing on
+          schedule from the new date, no further edits needed.
+        </p>
+
+        <Field label="Correct: next episode number">
+          <input
+            type="number"
+            min="1"
+            placeholder="e.g. 5"
+            value={form.nextEpisodeNumber}
+            onChange={(v) => setForm({ ...form, nextEpisodeNumber: v })}
+          />
+        </Field>
+
+        <Field label="Correct: next episode date & time">
+          <input
+            type="datetime-local"
+            value={form.nextEpisodeAt}
+            onChange={(v) => setForm({ ...form, nextEpisodeAt: v })}
           />
         </Field>
 
