@@ -12,8 +12,10 @@ export default function HomeClient() {
   const [query, setQuery] = useState("");
   const [anime, setAnime] = useState([]);
   const [loading, setLoading] = useState(true);
-  // Defaults to today's weekday so the Schedule tab opens on "what's airing today".
-  const [weekday, setWeekday] = useState(() => new Date().getDay());
+  // Neutral on both server and client render ("all") to avoid a hydration
+  // mismatch — the real weekday is only known on the client, and gets set
+  // right after mount below.
+  const [weekday, setWeekday] = useState("all");
   // Once the user manually picks a day, stop auto-advancing so we don't
   // yank them off the day they're browsing when midnight passes.
   const userPickedDay = useRef(false);
@@ -40,6 +42,12 @@ export default function HomeClient() {
   useEffect(() => {
     let timeoutId;
 
+    function applyToday() {
+      if (!userPickedDay.current) {
+        setWeekday(new Date().getDay());
+      }
+    }
+
     function scheduleNextMidnight() {
       const now = new Date();
       const nextMidnight = new Date(
@@ -53,14 +61,16 @@ export default function HomeClient() {
       const msUntilMidnight = nextMidnight.getTime() - now.getTime();
 
       timeoutId = setTimeout(() => {
-        if (!userPickedDay.current) {
-          setWeekday(new Date().getDay());
-        }
+        applyToday();
         scheduleNextMidnight();
       }, msUntilMidnight);
     }
 
+    // Runs once, right after mount — this is what sets the real, correct
+    // weekday (client's own clock), replacing the neutral "all" default.
+    applyToday();
     scheduleNextMidnight();
+
     return () => clearTimeout(timeoutId);
   }, []);
 
