@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Tabs from "./Tabs";
 import WeekdayTabs from "./WeekdayTabs";
 import SearchBar from "./SearchBar";
@@ -12,8 +12,13 @@ export default function HomeClient() {
   const [query, setQuery] = useState("");
   const [anime, setAnime] = useState([]);
   const [loading, setLoading] = useState(true);
-  // Defaults to today's weekday so the Schedule tab opens on "what's airing today".
-  const [weekday, setWeekday] = useState(() => new Date().getDay());
+  // Neutral on both server and client render ("all") to avoid a hydration
+  // mismatch — the real weekday is only known on the client, and gets set
+  // right after mount below.
+  const [weekday, setWeekday] = useState("all");
+  // Once the user manually picks a day, stop auto-advancing so we don't
+  // yank them off the day they're browsing when midnight passes.
+  const userPickedDay = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -30,6 +35,61 @@ export default function HomeClient() {
 
     return () => controller.abort();
   }, [tab, query]);
+
+  // Keep "today" correct across local midnight without needing a page
+  // refresh: schedule an update for the next midnight, then keep
+  // rescheduling every 24h after that.
+  useEffect(() => {
+    let timeoutId;
+
+    function applyToday() {
+      if (!userPickedDay.current) {
+        setWeekday(new Date().getDay());
+      }
+    }
+
+    function scheduleNextMidnight() {
+      const now = new Date();
+      const nextMidnight = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + 1,
+        0,
+        0,
+        5 // a few seconds after midnight, to be safely past the boundary
+      );
+      const msUntilMidnight = nextMidnight.getTime() - now.getTime();
+
+      timeoutId = setTimeout(() => {
+        applyToday();
+        scheduleNextMidnight();
+      }, msUntilMidnight);
+    }
+
+    // Runs once, right after mount — this is what sets the real, correct
+    // weekday (client's own clock), replacing the neutral "all" default.
+    applyToday();
+    scheduleNextMidnight();
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  // Also catch the transition immediately if the tab was backgrounded
+  // (mobile browsers throttle timers) and comes back into focus on a new day.
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === "visible" && !userPickedDay.current) {
+        setWeekday(new Date().getDay());
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
+
+  function handleWeekdayChange(day) {
+    userPickedDay.current = true;
+    setWeekday(day);
+  }
 
   const visibleAnime = useMemo(() => {
     if (tab !== "schedule" || weekday === "all") return anime;
@@ -60,7 +120,7 @@ export default function HomeClient() {
 
       {tab === "schedule" && (
         <div className="mb-6">
-          <WeekdayTabs active={weekday} onChange={setWeekday} />
+          <WeekdayTabs active={weekday} onChange={handleWeekdayChange} />
         </div>
       )}
 
