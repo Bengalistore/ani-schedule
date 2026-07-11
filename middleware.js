@@ -11,8 +11,9 @@ export async function middleware(request) {
 
   const isProtectedPage = pathname.startsWith("/admin/dashboard");
   const isProtectedApi =
-    pathname.startsWith("/api/anime") &&
-    ["POST", "PUT", "DELETE", "PATCH"].includes(request.method);
+    (pathname.startsWith("/api/anime") &&
+      ["POST", "PUT", "DELETE", "PATCH"].includes(request.method)) ||
+    pathname === "/api/admin/import-anilist";
 
   if (isProtectedPage || isProtectedApi) {
     const token = request.cookies.get(ADMIN_COOKIE)?.value;
@@ -38,5 +39,5 @@ function applyNoIndex(res) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/anime/:path*"]
+  matcher: ["/admin/:path*", "/api/anime/:path*", "/api/admin/import-anilist"]
 };

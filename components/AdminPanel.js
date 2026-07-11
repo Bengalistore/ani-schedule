@@ -32,6 +32,9 @@ export default function AdminPanel() {
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [importError, setImportError] = useState("");
 
   async function loadList() {
     setLoading(true);
@@ -129,6 +132,28 @@ export default function AdminPanel() {
     loadList();
   }
 
+  async function handleImport(mode) {
+    setImporting(true);
+    setImportError("");
+    setImportResult(null);
+
+    const res = await fetch("/api/admin/import-anilist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    setImporting(false);
+
+    if (res.ok) {
+      setImportResult(data);
+      loadList();
+    } else {
+      setImportError(data.error || "Import failed.");
+    }
+  }
+
   async function handleLogout() {
     await fetch("/api/admin/logout", { method: "POST" });
     router.push("/admin");
@@ -151,6 +176,56 @@ export default function AdminPanel() {
         >
           Log out
         </button>
+      </div>
+
+      <div className="mb-10 rounded-card border border-line bg-surface p-6">
+        <h2 className="font-display text-lg tracking-wide text-white">
+          Import from AniList
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          Pulls currently-airing episode times and/or announced upcoming anime
+          from AniList (the same source AniChart runs on) and adds or updates
+          them automatically. Watch links you&apos;ve set manually are never
+          overwritten.
+        </p>
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            onClick={() => handleImport("airing")}
+            disabled={importing}
+            className="rounded-full bg-surface2 px-4 py-2 text-sm font-semibold text-white hover:bg-surface2/70 disabled:opacity-60"
+          >
+            {importing ? "Importing…" : "Import Airing"}
+          </button>
+          <button
+            onClick={() => handleImport("upcoming")}
+            disabled={importing}
+            className="rounded-full bg-surface2 px-4 py-2 text-sm font-semibold text-white hover:bg-surface2/70 disabled:opacity-60"
+          >
+            {importing ? "Importing…" : "Import Upcoming"}
+          </button>
+          <button
+            onClick={() => handleImport("both")}
+            disabled={importing}
+            className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent/90 disabled:opacity-60"
+          >
+            {importing ? "Importing…" : "Import Both"}
+          </button>
+        </div>
+
+        {importResult && (
+          <p className="mt-3 text-sm text-onair">
+            Done — {importResult.created} added, {importResult.updated} updated
+            (of {importResult.total} checked).
+          </p>
+        )}
+        {importError && <p className="mt-3 text-sm text-accent">{importError}</p>}
+
+        <p className="mt-3 text-xs text-muted">
+          This also runs automatically every 6 hours if you&apos;ve set up the{" "}
+          <code className="text-white">CRON_SECRET</code> env var and deployed
+          with the included <code className="text-white">vercel.json</code>.
+        </p>
       </div>
 
       <form

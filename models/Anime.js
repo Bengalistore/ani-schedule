@@ -6,6 +6,10 @@ const AnimeSchema = new mongoose.Schema(
     titleEnglish: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true, index: true },
 
+    // Set only for anime imported/synced from AniList; used to avoid
+    // creating duplicates on repeat syncs. Manually-added anime leave this null.
+    anilistId: { type: Number, default: null, index: true, sparse: true, unique: true },
+
     image: { type: String, required: true },
     type: {
       type: String,
