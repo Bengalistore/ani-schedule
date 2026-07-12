@@ -154,6 +154,31 @@ export default function AdminPanel() {
     }
   }
 
+  async function handleClearAnilist() {
+    if (
+      !confirm(
+        "Delete every AniList-imported anime? Manually added anime are kept. This cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    setImporting(true);
+    setImportError("");
+    setImportResult(null);
+
+    const res = await fetch("/api/admin/import-anilist", { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    setImporting(false);
+
+    if (res.ok) {
+      setImportResult({ cleared: data.deleted });
+      loadList();
+    } else {
+      setImportError(data.error || "Clear failed.");
+    }
+  }
+
   async function handleLogout() {
     await fetch("/api/admin/logout", { method: "POST" });
     router.push("/admin");
@@ -209,22 +234,36 @@ export default function AdminPanel() {
             disabled={importing}
             className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent/90 disabled:opacity-60"
           >
-            {importing ? "Importing…" : "Import Both"}
+            {importing ? "Working…" : "Import Both"}
+          </button>
+          <button
+            onClick={handleClearAnilist}
+            disabled={importing}
+            className="ml-auto rounded-full border border-accent/40 px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/10 disabled:opacity-60"
+          >
+            {importing ? "Working…" : "Clear AniList imports"}
           </button>
         </div>
 
-        {importResult && (
+        {importResult && importResult.cleared != null && (
+          <p className="mt-3 text-sm text-onair">
+            Cleared {importResult.cleared} AniList-imported anime.
+          </p>
+        )}
+        {importResult && importResult.created != null && (
           <p className="mt-3 text-sm text-onair">
             Done — {importResult.created} added, {importResult.updated} updated
+            {importResult.merged ? `, ${importResult.merged} duplicate(s) merged` : ""}{" "}
             (of {importResult.total} checked).
           </p>
         )}
         {importError && <p className="mt-3 text-sm text-accent">{importError}</p>}
 
         <p className="mt-3 text-xs text-muted">
-          This also runs automatically every 6 hours if you&apos;ve set up the{" "}
+          This also runs automatically once a day if you&apos;ve set up the{" "}
           <code className="text-white">CRON_SECRET</code> env var and deployed
-          with the included <code className="text-white">vercel.json</code>.
+          with the included <code className="text-white">vercel.json</code>{" "}
+          (Vercel&apos;s free plan only allows daily cron jobs).
         </p>
       </div>
 
